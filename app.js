@@ -21,28 +21,33 @@ connection.connect(function (err) {
         console.error(err);
         return;
     }
+    shop();
     console.log("Connected as Id: " + connection.threadId);
 });
 // Include id name and prices within a table printed to the console.
 
-function Product(id, name, prices) {
+function Product(id, name, prices, stock) {
     this.id = id;
     this.name = name;
     this.prices = prices;
+    this.stock = stock
 }
 
 function shop() {
-    var stock = [];
+    var store = [];
     connection.query("SELECT * FROM products", function (err, res) {
         
         for (i = 0; i < res.length; i++) {
             var id = res[i].id
             var name = res[i].product_name
             var price = res[i].price
-            var prod = new Product(id, name, price);
-            stock.push(prod);
+            var stock = res[i].stock_quantity
+            var prod = new Product(id, name, price, stock);
+            store.push(prod);
         }
-        console.table(stock)
+        console.log(`
+        `)
+        console.table(store);
 
 
     });
@@ -73,6 +78,7 @@ function shop() {
         }]).then(function (answer) {
             
             var query = "SELECT product_name, stock_quantity FROM products WHERE ?"
+            var update = "UPDATE products SET ? WHERE ?"
             var id = answer.purchase;
             var quantity; 
             var stock;
@@ -81,20 +87,17 @@ function shop() {
                 
                 stock = res[0].stock_quantity
                 if(stock > quantity){
-                    console.log("Ordering...");
                     stock -= quantity;
+                    connection.query(update, [{stock_quantity: stock},{id: id}], function(err, res){
+                        shop();
+                    })
+                    
                 }else{
                     console.log("insufficient stock.");
                     shop();
                 }
-
+                
             });
+
         });
 };
-
-shop()
-// prompt user for id of product they would like to buy
-// ask for the number of units
-// If there are enough in stock, complete purchase message
-// otherwise not enough in stock message
-// update sql database and print original message
