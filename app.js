@@ -25,24 +25,71 @@ connection.connect(function (err) {
 });
 // Include id name and prices within a table printed to the console.
 
-function Product(name, prices){
+function Product(id, name, prices) {
+    this.id = id;
     this.name = name;
     this.prices = prices;
 }
 
 function shop() {
-    
+    var stock = [];
     connection.query("SELECT * FROM products", function (err, res) {
-        var stock = {};
-        for(i=0; i < res.length; i++){
+        
+        for (i = 0; i < res.length; i++) {
             var id = res[i].id
             var name = res[i].product_name
             var price = res[i].price
-            stock[id] = new Product(name, price);
+            var prod = new Product(id, name, price);
+            stock.push(prod);
         }
         console.table(stock)
-    });
 
+
+    });
+    
+    inquirer.prompt([{
+        name: "purchase",
+        type: "input",
+        message: "Enter the id number of the product you wish to purchase.",
+        validate: function (input) {
+            if (isNaN(input) === true) {
+                console.log(`
+                please insert a number`)
+                return false;
+            }return true;
+        }
+    },
+        {
+            name: "quantity",
+            type: "input",
+            message: "Enter desired quantity.",
+            validate: function (input) {
+                if (isNaN(input) === true) {
+                    console.log(`
+                please insert a number`)
+                    return false;
+                } return true
+            }
+        }]).then(function (answer) {
+            
+            var query = "SELECT product_name, stock_quantity FROM products WHERE ?"
+            var id = answer.purchase;
+            var quantity; 
+            var stock;
+            connection.query(query, {id: id}, function (err, res) {
+                quantity = answer.quantity;
+                
+                stock = res[0].stock_quantity
+                if(stock > quantity){
+                    console.log("Ordering...");
+                    stock -= quantity;
+                }else{
+                    console.log("insufficient stock.");
+                    shop();
+                }
+
+            });
+        });
 };
 
 shop()
