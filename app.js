@@ -21,8 +21,8 @@ connection.connect(function (err) {
         console.error(err);
         return;
     }
-    shop();
     console.log("Connected as Id: " + connection.threadId);
+    shop();
 });
 // Include id name and prices within a table printed to the console.
 
@@ -89,6 +89,7 @@ function shop() {
                 if(stock > quantity){
                     stock -= quantity;
                     connection.query(update, [{stock_quantity: stock},{id: id}], function(err, res){
+                        console.log("Order Complete!")
                         shop();
                     })
                     
