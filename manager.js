@@ -24,54 +24,65 @@ connection.connect(function (err) {
     console.log("Connected as Id: " + connection.threadId);
     shop();
 });
-// Include id name and prices within a table printed to the console.
 
+// Constructor creating records for queried items
 function Product(id, name, prices, stock) {
     this.id = id;
     this.name = name;
     this.prices = prices;
     this.stock = stock
 }
-function table(res){
+
+// Display a table of data from bamazon_db
+function table(res) {
     var store = [];
     for (i = 0; i < res.length; i++) {
         var id = res[i].id
         var name = res[i].product_name
         var price = res[i].price
         var stock = res[i].stock_quantity
-        var prod = new Product(id, name, price, stock);
+        var department = res[i].department_name
+        var prod = new Product(id, name, price, stock, department);
         store.push(prod);
     }
     console.log(`
     `)
     console.table(store);
-
 }
-function forSale(){
-    
+
+// Display information table and pull up options. 
+function forSale() {
+
     connection.query("SELECT * FROM products", function (err, res) {
         table(res);
         shop();
     });
 }
+// Display table without calling menu
+function displayStock() {
 
-function lowStock(){
-    connection.query("SELECT * FROM products WHERE stock_quantity <= 5", function(err, res){
+    connection.query("SELECT * FROM products", function (err, res) {
+        table(res);
+    });
+}
+
+function lowStock() {
+    connection.query("SELECT * FROM products WHERE stock_quantity <= 5", function (err, res) {
         table(res);
         shop();
     });
 }
 
-function addThing(){
+function addThing() {
     inquirer.prompt([{
         name: "product_name",
         type: "input",
         message: "Product Name: "
-    },{
+    }, {
         name: "department_name",
         type: "input",
         message: "Department Name: "
-    },{
+    }, {
         name: "price",
         type: "input",
         message: "Price: ",
@@ -82,7 +93,7 @@ function addThing(){
                 return false;
             } return true
         }
-    },{
+    }, {
         name: "stock_quantity",
         type: "input",
         message: "Stock Quantity: ",
@@ -93,17 +104,21 @@ function addThing(){
                 return false;
             } return true
         }
-    }]).then(function(answer){
+    }]).then(function (answer) {
+        displayStock();
         query = "INSERT INTO products (product_name, department_name, price, stock_quantity) VALUES ( ? , ? , ? , ?)"
-        connection.query(query, [answer.product_name, answer.department_name, answer.price, answer.stock_quantity], function(err, res){
+        connection.query(query, [answer.product_name, answer.department_name, answer.price, answer.stock_quantity], function (err, res) {
+            if (err) throw err;
             console.log("Product Successfully added");
-            shop();
+            forSale();
         });
     });
 
 }
 
-function moreStuff(){
+// Update Inventory for existing products
+
+function moreStuff() {
     connection.query("SELECT * FROM products", function (err, res) {
         table(res);
 
@@ -111,10 +126,10 @@ function moreStuff(){
             name: "product_select",
             type: "input",
             message: "Enter Product Id"
-        },{
+        }, {
             name: "additional",
             type: "input",
-            message: "Enter Additional Amount",
+            message: "Enter Current Inventory.",
             validate: function (input) {
                 if (isNaN(input) === true) {
                     console.log(`
@@ -125,88 +140,43 @@ function moreStuff(){
         }]).then(function (answer) {
             var id = answer.product_select;
             var stock = answer.additional;
-                var query = "UPDATE products SET ? WHERE ?"
-                connection.query(query, [{product_stock: answer.additional},{}])
+            var query = "UPDATE products SET ? WHERE ?"
+            connection.query(query, [{ stock_quantity: stock }, { id: id }], function (err, res) {
+                if (err) throw err;
+                console.log("Inventory Updated Successfully")
+                shop();
+            });
         });
     });
 
 }
 
+
+// Switch statement listing options
 function shop() {
 
-    
     inquirer.prompt([{
         name: "menu",
         type: "list",
-        choices: ["View Products for Sale", "View Low Inventory", "Add to Inventory", "Add New Product"]
+        choices: ["View Products for Sale", "View Low Inventory", "Update Inventory", "Add New Product"]
     }]).then(function (answer) {
-        
-        switch(answer.menu){
-            case "View Products for Sale": 
-            forSale();
-            break;
+
+        switch (answer.menu) {
+            case "View Products for Sale":
+                forSale();
+                break;
 
             case "View Low Inventory":
-            lowStock();
-            break;
+                lowStock();
+                break;
 
             case "Add New Product":
-            addThing();
-            break;
+                addThing();
+                break;
 
-            case "Add to Inventory":
-            moreStuff();
-            break;
+            case "Update Inventory":
+                moreStuff();
+                break;
         }
-        
-        
-        // inquirer.prompt([{
-        //     name: "purchase",
-        //     type: "input",
-        //     message: "Enter the id number of the product you wish to purchase.",
-        //     validate: function (input) {
-        //         if (isNaN(input) === true) {
-        //             console.log(`
-        //             please insert a number`)
-        //             return false;
-        //         }return true;
-        //     }
-        // },
-        //     {
-        //         name: "quantity",
-        //         type: "input",
-        //         message: "Enter desired quantity.",
-        //         validate: function (input) {
-        //             if (isNaN(input) === true) {
-        //                 console.log(`
-        //             please insert a number`)
-        //                 return false;
-        //             } return true
-        //         }
-        //     }])
-            
-            // var query = "SELECT product_name, stock_quantity FROM products WHERE ?"
-            // var update = "UPDATE products SET ? WHERE ?"
-            // var id = answer.purchase;
-            // var quantity; 
-            // var stock;
-            // connection.query(query, {id: id}, function (err, res) {
-            //     quantity = answer.quantity;
-                
-            //     stock = res[0].stock_quantity
-            //     if(stock > quantity){
-            //         stock -= quantity;
-            //         connection.query(update, [{stock_quantity: stock},{id: id}], function(err, res){
-            //             console.log("Order Complete!")
-            //             shop();
-            //         })
-                    
-            //     }else{
-            //         console.log("insufficient stock.");
-            //         shop();
-            //     }
-                
-            // });
-
-        });
+    });
 };
